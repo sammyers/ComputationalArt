@@ -15,14 +15,14 @@ def build_random_function(min_depth, max_depth):
         returns: the randomly generated function, with a random depth between the minimum and maximum. 
                  This can be evaluated directly with input values.
     """
-    prod = lambda a, b: a * b
-    avg = lambda a, b: 0.5 * (a + b)
-    cos_pi = lambda a: cos(pi * a)
-    sin_pi = lambda a: sin(pi * a)
-    x = lambda a, b: a
-    y = lambda a, b: b
-    square = lambda a: a**2
-    absdiff = lambda a, b: abs(a) - abs(b)
+    prod = lambda a, b, t: a * b
+    avg = lambda a, b, t: 0.5 * (a + b)
+    cos_pi = lambda a, t: cos(pi * a * (1 - t))
+    sin_pi = lambda a, t: sin(pi * a * (1 - t))
+    x = lambda a, b, t: a * (1 - t)
+    y = lambda a, b, t: b * (1 - t)
+    square = lambda a, t: a**2
+    absdiff = lambda a, b, t: (abs(a) - abs(b))
 
     if min_depth == 1 and max_depth == 1:
         return random.choice([x, y])
@@ -41,10 +41,10 @@ def build_random_function(min_depth, max_depth):
     if func in [prod, avg, x, y, absdiff]:
         func1 = build_random_function(min_depth, max_depth)
         func2 = build_random_function(min_depth, max_depth)
-        new_func = lambda a, b: func(func1(a, b), func2(a, b))
+        new_func = lambda a, b, t: func(func1(a, b, t), func2(a, b, t), t)
     elif func == cos_pi or func == sin_pi or func == square:
         inner_func = build_random_function(min_depth, max_depth)
-        new_func = lambda a, b: func(inner_func(a, b))
+        new_func = lambda a, b, t: func(inner_func(a, b, t), t)
     return new_func
 
 
@@ -149,7 +149,7 @@ def test_image(filename, x_size=350, y_size=350):
     im.save(filename)
 
 
-def generate_art(filename, x_size=1920, y_size=1080):
+def generate_art(filename=None, frames=1, x_size=350, y_size=350):
     """ Generate computational art and save as an image file.
 
         filename: string filename for image (should be .png)
@@ -160,20 +160,27 @@ def generate_art(filename, x_size=1920, y_size=1080):
     green_function = build_random_function(7, 9)
     blue_function = build_random_function(7, 9)
 
-    # Create image and loop over all pixels
-    im = Image.new("RGB", (x_size, y_size))
-    pixels = im.load()
-    for i in range(x_size):
-        for j in range(y_size):
-            x = remap_interval(i, 0, x_size, -1, 1)
-            y = remap_interval(j, 0, y_size, -1, 1)
-            pixels[i, j] = (
-                    color_map(red_function(x, y)),
-                    color_map(green_function(x, y)),
-                    color_map(blue_function(x, y))
-                    )
+    for time in range(frames):
+        if frames > 1:
+            filename = 'frame{}.png'.format(('00' + str(time))[-3:])
+            t = remap_interval(time, 0, frames, -1, 1)
+        # Create image and loop over all pixels
+        im = Image.new("RGB", (x_size, y_size))
+        pixels = im.load()
+        for i in range(x_size):
+            for j in range(y_size):
+                x = remap_interval(i, 0, x_size, -1, 1)
+                y = remap_interval(j, 0, y_size, -1, 1)
+                pixels[i, j] = (
+                        color_map(red_function(x, y, t)),
+                        color_map(green_function(x, y, t)),
+                        color_map(blue_function(x, y, t))
+                        )
 
-    im.save(filename)
+        if filename: 
+            im.save(filename)
+        else:
+            im.save('test.png')
 
 def lots_o_art(number):
     suffixes = range(number)
@@ -185,4 +192,5 @@ if __name__ == '__main__':
     import doctest
     doctest.testmod()
     # lots_o_art(10)
-    generate_art("art.png")
+    # generate_art("art.png")
+    generate_art(frames=150)
